@@ -3,64 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrustGuard • Мониторинг</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <title>TrustGuard • Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        /* Стили из предыдущей версии Claude — оставил как есть, чтобы не ломать */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0a0a0a, #1a0033); color: #fff; margin:0; padding:20px; min-height:100vh; }
-        .container { max-width: 640px; margin:auto; background:rgba(20,20,40,0.95); padding:35px; border-radius:24px; border:1px solid #00ff9d30; }
-        h1 { text-align:center; background:linear-gradient(#00ff9d,#00ccff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-        button { width:100%; padding:18px; font-size:1.2rem; background:linear-gradient(#00ff9d,#00cc88); color:black; border:none; border-radius:16px; margin:12px 0; font-weight:600; }
-        #status { padding:20px; background:rgba(0,0,0,0.4); border-radius:16px; margin:20px 0; border-left:5px solid #00ff9d; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 100%);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 640px;
+            margin: 40px auto;
+            padding: 40px 30px;
+            background: rgba(20,20,40,0.95);
+            border-radius: 24px;
+            border: 1px solid rgba(0,255,157,0.2);
+        }
+        h1 {
+            text-align: center;
+            background: linear-gradient(90deg, #00ff9d, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.4rem;
+        }
+        button {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.2rem;
+            background: linear-gradient(90deg, #00ff9d, #00cc88);
+            color: black;
+            border: none;
+            border-radius: 16px;
+            margin: 12px 0;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #status {
+            padding: 20px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 16px;
+            margin: 20px 0;
+            border-left: 5px solid #00ff9d;
+            min-height: 60px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>TrustGuard</h1>
-        <p style="text-align:center;color:#aaa;">Подключение + Уведомления в Telegram</p>
-
-        <button onclick="connectWallet()">🔗 Подключить Кошелек</button>
-        <div id="status">Готов к подключению...</div>
+        <button onclick="connectWallet()">🔗 Подключить Trust Wallet</button>
+        <div id="status">Нажми кнопку для подключения...</div>
     </div>
 
     <script>
-        let walletAddress = null;
+        let provider, signer, walletAddress = null;
+
+        // Надёжная загрузка ethers.js
+        async function ensureEthers() {
+            if (typeof ethers !== 'undefined') return true;
+
+            const sources = [
+                'https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js',
+                'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js'
+            ];
+
+            for (let src of sources) {
+                try {
+                    document.getElementById('status').innerHTML = '⏳ Загрузка библиотеки...';
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = src;
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                    if (typeof ethers !== 'undefined') return true;
+                } catch (e) {}
+            }
+            throw new Error('Не удалось загрузить ethers.js');
+        }
 
         async function connectWallet() {
             const status = document.getElementById('status');
             status.innerHTML = '🔄 Подключение...';
 
             try {
-                if (typeof ethers === 'undefined') {
-                    status.innerHTML = '⏳ Загрузка...';
-                    setTimeout(connectWallet, 1000);
-                    return;
-                }
+                await ensureEthers();
 
                 if (!window.ethereum) {
-                    return status.innerHTML = '❌ Открой во встроенном браузере Trust Wallet';
+                    return status.innerHTML = '❌ Открой сайт внутри Trust Wallet Browser';
                 }
 
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                provider = new ethers.providers.Web3Provider(window.ethereum);
                 await provider.send("eth_requestAccounts", []);
-                const signer = provider.getSigner();
+                signer = provider.getSigner();
                 walletAddress = await signer.getAddress();
 
                 status.innerHTML = `✅ Подключено!<br><small>${walletAddress}</small>`;
-
-                // === ОТПРАВКА В TELEGRAM БОТА ===
-                const botUrl = "https://твой-бот-url.railway.app/connect"; // ← Замени на свой
-
-                fetch(botUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        address: walletAddress,
-                        timestamp: new Date().toISOString()
-                    })
-                }).catch(err => console.log("Не удалось отправить в бот", err));
 
             } catch (e) {
                 status.innerHTML = `Ошибка: ${e.message}`;
