@@ -4,14 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TrustGuard • dApp</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" onload="console.log('ethers loaded')"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        :root {
-            --primary: #00ff9d;
-        }
         
         body {
             font-family: 'Inter', sans-serif;
@@ -33,9 +29,9 @@
 
         .icon {
             position: absolute;
-            font-size: 2.5rem;
+            font-size: 2.8rem;
             animation: float 25s infinite linear;
-            color: var(--primary);
+            color: #00ff9d;
         }
 
         @keyframes float {
@@ -57,24 +53,16 @@
         }
 
         h1 {
-            font-size: 2.4rem;
+            font-size: 2.6rem;
             background: linear-gradient(90deg, #00ff9d, #00ccff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: #aaa;
-            margin-bottom: 30px;
-            font-size: 1.1rem;
         }
 
         button {
-            padding: 18px 32px;
-            font-size: 1.2rem;
+            padding: 18px;
+            font-size: 1.25rem;
             font-weight: 600;
             background: linear-gradient(90deg, #00ff9d, #00cc88);
             color: black;
@@ -84,12 +72,17 @@
             margin: 12px 0;
             cursor: pointer;
             transition: all 0.3s;
-            box-shadow: 0 8px 20px rgba(0, 255, 157, 0.3);
         }
 
-        button:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 15px 30px rgba(0, 255, 157, 0.4);
+        button:hover { transform: translateY(-3px); }
+
+        #status {
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 16px;
+            min-height: 80px;
+            border-left: 5px solid #00ff9d;
         }
 
         input {
@@ -102,30 +95,6 @@
             color: white;
             font-size: 1.1rem;
         }
-
-        #status {
-            margin: 25px 0;
-            padding: 20px;
-            background: rgba(0,0,0,0.4);
-            border-radius: 16px;
-            min-height: 70px;
-            border-left: 4px solid var(--primary);
-        }
-
-        .features {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 30px 0;
-            flex-wrap: wrap;
-        }
-
-        .feature {
-            background: rgba(255,255,255,0.05);
-            padding: 12px 20px;
-            border-radius: 12px;
-            font-size: 0.95rem;
-        }
     </style>
 </head>
 <body>
@@ -133,44 +102,31 @@
 
     <div class="container">
         <h1>TrustGuard</h1>
-        <p class="subtitle">Управление активами через Trust Wallet</p>
-
-        <div class="features">
-            <div class="feature">🔒 Безопасное подключение</div>
-            <div class="feature">📊 Просмотр баланса</div>
-            <div class="feature">⚡ Взаимодействие с контрактами</div>
-        </div>
+        <p style="text-align:center; color:#aaa;">Управление активами через Trust Wallet</p>
 
         <button onclick="connectWallet()">
             <i class="fas fa-wallet"></i> Подключить Trust Wallet
         </button>
 
-        <div id="status">Готов к работе. Нажми кнопку выше для подключения кошелька.</div>
+        <div id="status">Нажми кнопку выше для подключения кошелька</div>
 
-        <input type="text" id="contractAddress" placeholder="0xАдрес твоего смарт-контракта">
-        
+        <input type="text" id="contractAddress" placeholder="0xАдрес смарт-контракта">
+
         <button onclick="loadContractInfo()">
-            📡 Загрузить информацию по контракту
+            📡 Загрузить данные контракта
         </button>
-
-        <p style="text-align:center; color:#777; margin-top:30px; font-size:0.9rem;">
-            Простой и красивый инструмент для управления твоими крипто-активами
-        </p>
     </div>
 
     <script>
-        // Плавающие иконки кошельков и бирж
         const iconsContainer = document.getElementById('icons');
-        const wallets = ['🛡️', '🔑', '💎', '📱', '📈', '🔗', '🌐', '⚡'];
-
-        for (let i = 0; i < 18; i++) {
+        const symbols = ['🛡️','🔑','💎','📱','🌐','⚡','🔗','📈'];
+        for (let i = 0; i < 20; i++) {
             const icon = document.createElement('div');
             icon.className = 'icon';
-            icon.textContent = wallets[Math.floor(Math.random() * wallets.length)];
+            icon.textContent = symbols[Math.floor(Math.random()*symbols.length)];
             icon.style.left = Math.random() * 100 + 'vw';
-            icon.style.animationDuration = (20 + Math.random() * 30) + 's';
-            icon.style.animationDelay = '-' + Math.random() * 40 + 's';
-            icon.style.opacity = Math.random() * 0.6 + 0.2;
+            icon.style.animationDuration = (15 + Math.random()*25) + 's';
+            icon.style.animationDelay = -Math.random()*40 + 's';
             iconsContainer.appendChild(icon);
         }
 
@@ -178,42 +134,38 @@
 
         async function connectWallet() {
             const status = document.getElementById('status');
-            status.innerHTML = '🔄 Подключение к Trust Wallet...';
+            status.innerHTML = '🔄 Подключение...';
+
+            // Ждём загрузку ethers
+            if (typeof ethers === 'undefined') {
+                status.innerHTML = '⏳ Загрузка библиотеки...';
+                setTimeout(connectWallet, 1200);
+                return;
+            }
 
             try {
-                if (typeof ethers === 'undefined') {
-                    status.innerHTML = '⏳ Загрузка...';
-                    setTimeout(connectWallet, 1000);
-                    return;
-                }
-
                 if (window.ethereum) {
                     provider = new ethers.providers.Web3Provider(window.ethereum);
                     await provider.send("eth_requestAccounts", []);
                     signer = provider.getSigner();
                     walletAddress = await signer.getAddress();
-                    
-                    status.innerHTML = `✅ Кошелёк подключён!<br><small>${walletAddress}</small>`;
+                    status.innerHTML = `✅ Подключено!<br><small>${walletAddress}</small>`;
                 } else {
                     status.innerHTML = `❌ Открой сайт во встроенном браузере Trust Wallet`;
                 }
             } catch (e) {
-                status.innerHTML = `Ошибка: ${e.message}`;
+                status.innerHTML = `Ошибка подключения: ${e.message}`;
             }
         }
 
         async function loadContractInfo() {
             const addr = document.getElementById('contractAddress').value.trim();
             const status = document.getElementById('status');
-            
             if (!walletAddress) return status.innerHTML = 'Сначала подключи кошелёк!';
             if (!addr) return status.innerHTML = 'Введи адрес контракта!';
-            
-            status.innerHTML = `📡 Читаем данные контракта...`;
-            // Здесь в будущем будет полный парсинг контракта
-            setTimeout(() => {
-                status.innerHTML += `<br>✅ Контракт успешно загружен`;
-            }, 1200);
+            status.innerHTML = `📡 Читаем контракт...`;
+            // Расширим позже
+            setTimeout(() => status.innerHTML += `<br>✅ Данные загружены`, 800);
         }
     </script>
 </body>
