@@ -3,79 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мой dApp — Trust Wallet Connect</title>
+    <title>Trust Wallet dApp</title>
     <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
-    <script src="https://unpkg.com/@reown/appkit@1.0.0/dist/index.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin:0; background:#0a0a0a; color:#fff; }
-        .container { max-width: 800px; margin:40px auto; padding:30px; background:#1a1a1a; border-radius:16px; text-align:center; }
-        button { padding:16px 32px; font-size:18px; background:#00cc66; color:white; border:none; border-radius:12px; cursor:pointer; width:100%; max-width:300px; }
-        button:hover { background:#00b359; }
-        #status { margin:20px 0; padding:15px; background:#222; border-radius:10px; min-height:50px; }
+        body { font-family: Arial, sans-serif; background:#0f0f0f; color:#fff; margin:0; padding:20px; }
+        .container { max-width: 600px; margin:auto; background:#1a1a1a; padding:30px; border-radius:16px; text-align:center; }
+        button { padding:16px 32px; font-size:18px; background:#00cc66; color:white; border:none; border-radius:12px; width:100%; margin:10px 0; }
+        #status { margin:20px 0; padding:15px; background:#222; border-radius:10px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔗 Подключение к dApp</h1>
-        <p>Нажми кнопку ниже — появится выбор кошельков (Trust Wallet в приоритете)</p>
+        <p>Открыто внутри Trust Wallet</p>
         
-        <button onclick="connectWithModal()">Подключить Кошелек</button>
+        <button onclick="connectWallet()">Подключить Trust Wallet</button>
         
         <div id="status"></div>
         
-        <div style="margin-top:40px">
-            <input type="text" id="contractAddress" placeholder="0xАдрес смарт-контракта" style="width:100%; padding:14px; margin-bottom:10px; background:#333; color:white; border-radius:8px;">
-            <button onclick="loadContractInfo()">Загрузить данные контракта</button>
-        </div>
+        <input type="text" id="contractAddress" placeholder="0xАдрес смарт-контракта" style="width:100%; padding:14px; margin:15px 0; background:#333; border:none; border-radius:8px; color:white;">
+        <button onclick="loadContractInfo()">Загрузить данные контракта</button>
     </div>
 
     <script>
-        let provider, signer, walletAddress;
+        let provider, signer, walletAddress = null;
 
-        // Инициализация Reown Modal (WalletConnect)
-        const projectId = "2c08e96a80271af31718f5fe78fff729"; // ← Получи бесплатно на https://cloud.reown.com
-
-        async function connectWithModal() {
+        async function connectWallet() {
             const status = document.getElementById('status');
-            status.innerHTML = 'Открывается модальное окно...';
+            status.innerHTML = '🔄 Подключение...';
 
             try {
-                // Настройка модального окна
-                const { createAppKit } = await import("https://unpkg.com/@reown/appkit@1.0.0/dist/index.js");
-                
-                const modal = createAppKit({
-                    projectId: projectId,
-                    networks: [ /* добавь нужные сети, например */ ],
-                    themeMode: 'dark',
-                    featuredWalletIds: [
-                        "c57ca95b3b3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c" // Trust Wallet ID (можно найти в docs)
-                    ]
-                });
-
-                await modal.open();
-                
-                // После подключения получаем данные
-                modal.subscribeState((state) => {
-                    if (state.isConnected && state.address) {
-                        walletAddress = state.address;
-                        provider = modal.getProvider();
-                        signer = provider.getSigner ? provider.getSigner() : null;
-                        status.innerHTML = `✅ Подключено!<br><small>${walletAddress}</small>`;
-                    }
-                });
-
+                if (window.ethereum) {
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    await provider.send("eth_requestAccounts", []);
+                    signer = provider.getSigner();
+                    walletAddress = await signer.getAddress();
+                    status.innerHTML = `✅ Подключено!<br><small>${walletAddress}</small>`;
+                } else {
+                    status.innerHTML = `❌ Открой сайт внутри Trust Wallet Browser`;
+                }
             } catch (e) {
                 status.innerHTML = `Ошибка: ${e.message}`;
-                console.error(e);
             }
         }
 
         async function loadContractInfo() {
             const addr = document.getElementById('contractAddress').value.trim();
-            const infoDiv = document.createElement('div'); // можно добавить отдельный блок
-            if (!walletAddress) return alert('Сначала подключи кошелек');
-            // ... логика ethers.Contract как раньше
-            alert('Контракт загружен (расширь функцию под свой ABI)');
+            if (!walletAddress || !addr) {
+                alert('Подключи кошелёк и введи адрес контракта');
+                return;
+            }
+            alert('✅ Контракт подключён (добавим полную логику позже)');
+            // Здесь будет код чтения контракта
         }
     </script>
 </body>
