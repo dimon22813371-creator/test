@@ -3,110 +3,422 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrustGuard • Dashboard</title>
+    <title>MyWallet Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * { box-sizing: border-box; }
+
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 100%);
             color: #fff;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             min-height: 100vh;
+            overflow-x: hidden;
         }
+
+        .background-icons {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.15;
+        }
+
+        .icon {
+            position: absolute;
+            font-size: 2.8rem;
+            animation: float 25s infinite linear;
+            color: #00ff9d;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); }
+            100% { transform: translateY(-100vh) rotate(360deg); }
+        }
+
         .container {
+            position: relative;
+            z-index: 2;
             max-width: 640px;
             margin: 40px auto;
             padding: 40px 30px;
-            background: rgba(20,20,40,0.95);
+            background: rgba(20, 20, 40, 0.95);
             border-radius: 24px;
-            border: 1px solid rgba(0,255,157,0.2);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 255, 157, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 255, 157, 0.1);
         }
+
         h1 {
-            text-align: center;
+            font-size: 2.4rem;
             background: linear-gradient(90deg, #00ff9d, #00ccff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-size: 2.4rem;
+            text-align: center;
+            margin-bottom: 4px;
         }
+
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 28px;
+            font-size: 0.95rem;
+        }
+
+        section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        section h2 {
+            font-size: 1.05rem;
+            color: #00ff9d;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         button {
-            width: 100%;
-            padding: 18px;
-            font-size: 1.2rem;
+            padding: 16px;
+            font-size: 1.05rem;
+            font-weight: 600;
             background: linear-gradient(90deg, #00ff9d, #00cc88);
             color: black;
             border: none;
             border-radius: 16px;
-            margin: 12px 0;
-            font-weight: 600;
+            width: 100%;
+            margin: 8px 0;
             cursor: pointer;
+            transition: all 0.2s;
         }
+
+        button:hover:not(:disabled) { transform: translateY(-2px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        button.secondary {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            border: 1px solid rgba(0,255,157,0.3);
+        }
+
+        button.danger {
+            background: linear-gradient(90deg, #ff5f6d, #ff3d5a);
+            color: #fff;
+        }
+
         #status {
-            padding: 20px;
+            margin: 20px 0;
+            padding: 18px;
             background: rgba(0,0,0,0.4);
             border-radius: 16px;
-            margin: 20px 0;
+            min-height: 24px;
             border-left: 5px solid #00ff9d;
-            min-height: 60px;
+            font-size: 0.95rem;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+
+        #status.error { border-left-color: #ff5f6d; }
+
+        input {
+            width: 100%;
+            padding: 16px;
+            margin: 10px 0;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(0,255,157,0.3);
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        input::placeholder { color: #888; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .info-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+
+        .info-card .label {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .info-card .value {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 4px;
+            word-break: break-all;
+        }
+
+        .hidden { display: none; }
+
+        .net-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(0,255,157,0.15);
+            border-radius: 999px;
+            font-size: 0.8rem;
+            color: #00ff9d;
+            margin-left: 8px;
         }
     </style>
 </head>
 <body>
+    <div class="background-icons" id="icons"></div>
+
     <div class="container">
-        <h1>TrustGuard</h1>
-        <button onclick="connectWallet()">🔗 Подключить Trust Wallet</button>
-        <div id="status">Нажми кнопку для подключения...</div>
+        <h1>MyWallet Dashboard</h1>
+        <p class="subtitle">Личная панель для просмотра и управления своим кошельком</p>
+
+        <button id="connectBtn" onclick="connectWallet()">
+            <i class="fas fa-wallet"></i> Подключить кошелёк
+        </button>
+
+        <div id="status">Нажми кнопку выше, чтобы подключить кошелёк (MetaMask, Trust Wallet и любой другой инжектированный провайдер).</div>
+
+        <!-- Данные о подключённом кошельке -->
+        <div id="walletInfo" class="hidden">
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="label">Адрес</div>
+                    <div class="value" id="addrValue">—</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Сеть <span class="net-badge" id="netBadge">—</span></div>
+                    <div class="value" id="balanceValue">—</div>
+                </div>
+            </div>
+            <button class="secondary" onclick="refreshBalance()"><i class="fas fa-rotate"></i> Обновить баланс</button>
+        </div>
+
+        <!-- Чтение произвольного смарт-контракта -->
+        <section id="contractSection" class="hidden">
+            <h2><i class="fas fa-satellite-dish"></i> Информация о контракте</h2>
+            <input type="text" id="contractAddress" placeholder="0xАдрес смарт-контракта (ERC20 / BEP20)">
+            <button class="secondary" onclick="loadContractInfo()">Загрузить данные контракта</button>
+            <div id="contractInfo" class="info-grid hidden"></div>
+        </section>
+
+        <!-- Отправка перевода -->
+        <section id="sendSection" class="hidden">
+            <h2><i class="fas fa-paper-plane"></i> Отправить перевод</h2>
+            <input type="text" id="sendTo" placeholder="Адрес получателя (0x...)">
+            <input type="text" id="sendAmount" placeholder="Сумма в нативной монете (например 0.01)">
+            <button class="danger" onclick="sendTransfer()">Отправить</button>
+        </section>
     </div>
 
+    <!-- Ethers.js с надёжной загрузкой и fallback на альтернативный CDN -->
     <script>
+        // ---- Плавающие иконки (чисто декоративные, не влияют на логику) ----
+        const iconsContainer = document.getElementById('icons');
+        const symbols = ['🛡️','🔑','💎','📱','🌐','⚡','🔗','📈'];
+        for (let i = 0; i < 20; i++) {
+            const icon = document.createElement('div');
+            icon.className = 'icon';
+            icon.textContent = symbols[Math.floor(Math.random()*symbols.length)];
+            icon.style.left = Math.random() * 100 + 'vw';
+            icon.style.animationDuration = (15 + Math.random()*25) + 's';
+            icon.style.animationDelay = -Math.random()*40 + 's';
+            iconsContainer.appendChild(icon);
+        }
+
+        // ---- Надёжная загрузка ethers.js: пробуем несколько CDN по очереди ----
+        // Раньше скрипт грузился через <script src=...> без обработки ошибки загрузки,
+        // и если CDN был заблокирован/недоступен (частый случай во встроенном браузере
+        // Trust Wallet), переменная `ethers` никогда не появлялась -> бесконечный
+        // setTimeout(connectWallet, 1200) с "Загрузка библиотеки...".
+        // Решение: явно грузим скрипт через Promise с таймаутом и запасными источниками.
+        const ETHERS_SOURCES = [
+            'https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js',
+            'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js',
+            'https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js'
+        ];
+
+        let ethersLoadPromise = null;
+
+        function loadScript(src, timeoutMs = 7000) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                const timer = setTimeout(() => {
+                    script.remove();
+                    reject(new Error('timeout'));
+                }, timeoutMs);
+                script.onload = () => { clearTimeout(timer); resolve(); };
+                script.onerror = () => { clearTimeout(timer); script.remove(); reject(new Error('load error')); };
+                document.head.appendChild(script);
+            });
+        }
+
+        async function ensureEthersLoaded(onProgress) {
+            if (typeof ethers !== 'undefined') return true;
+            if (ethersLoadPromise) return ethersLoadPromise;
+
+            ethersLoadPromise = (async () => {
+                for (let i = 0; i < ETHERS_SOURCES.length; i++) {
+                    try {
+                        onProgress && onProgress(`⏳ Загрузка библиотеки (источник ${i + 1}/${ETHERS_SOURCES.length})...`);
+                        await loadScript(ETHERS_SOURCES[i]);
+                        if (typeof ethers !== 'undefined') return true;
+                    } catch (e) {
+                        // пробуем следующий источник
+                    }
+                }
+                throw new Error('Не удалось загрузить библиотеку ethers.js ни с одного источника. Проверь интернет-соединение.');
+            })();
+
+            return ethersLoadPromise;
+        }
+
+        // ---- Состояние приложения ----
         let provider, signer, walletAddress = null;
 
-        // Надёжная загрузка ethers.js
-        async function ensureEthers() {
-            if (typeof ethers !== 'undefined') return true;
+        const ERC20_ABI = [
+            'function name() view returns (string)',
+            'function symbol() view returns (string)',
+            'function decimals() view returns (uint8)',
+            'function totalSupply() view returns (uint256)',
+            'function balanceOf(address) view returns (uint256)'
+        ];
 
-            const sources = [
-                'https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js',
-                'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js'
-            ];
+        function setStatus(html, isError = false) {
+            const status = document.getElementById('status');
+            status.innerHTML = html;
+            status.classList.toggle('error', isError);
+        }
 
-            for (let src of sources) {
-                try {
-                    document.getElementById('status').innerHTML = '⏳ Загрузка библиотеки...';
-                    await new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = src;
-                        script.onload = resolve;
-                        script.onerror = reject;
-                        document.head.appendChild(script);
-                    });
-                    if (typeof ethers !== 'undefined') return true;
-                } catch (e) {}
-            }
-            throw new Error('Не удалось загрузить ethers.js');
+        function shortAddr(addr) {
+            return addr.slice(0, 6) + '...' + addr.slice(-4);
         }
 
         async function connectWallet() {
-            const status = document.getElementById('status');
-            status.innerHTML = '🔄 Подключение...';
+            const btn = document.getElementById('connectBtn');
+            btn.disabled = true;
+            setStatus('🔄 Подключение...');
 
             try {
-                await ensureEthers();
+                await ensureEthersLoaded(setStatus);
 
                 if (!window.ethereum) {
-                    return status.innerHTML = '❌ Открой сайт внутри Trust Wallet Browser';
+                    setStatus('❌ Кошелёк не найден. Открой сайт во встроенном браузере кошелька (Trust Wallet, MetaMask и т.д.) или установи расширение в браузере.', true);
+                    btn.disabled = false;
+                    return;
                 }
 
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
+                provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+                await provider.send('eth_requestAccounts', []);
                 signer = provider.getSigner();
                 walletAddress = await signer.getAddress();
 
-                status.innerHTML = `✅ Подключено!<br><small>${walletAddress}</small>`;
+                const network = await provider.getNetwork();
+                document.getElementById('netBadge').textContent = network.name !== 'unknown' ? network.name : `chainId ${network.chainId}`;
+                document.getElementById('addrValue').textContent = shortAddr(walletAddress);
+                document.getElementById('addrValue').title = walletAddress;
+
+                document.getElementById('walletInfo').classList.remove('hidden');
+                document.getElementById('contractSection').classList.remove('hidden');
+                document.getElementById('sendSection').classList.remove('hidden');
+
+                setStatus(`✅ Подключено!<br><small>${walletAddress}</small>`);
+                await refreshBalance();
+
+                // Реагируем на смену аккаунта/сети без перезагрузки страницы
+                window.ethereum.removeAllListeners && window.ethereum.removeAllListeners('accountsChanged');
+                window.ethereum.on && window.ethereum.on('accountsChanged', () => location.reload());
+                window.ethereum.on && window.ethereum.on('chainChanged', () => location.reload());
 
             } catch (e) {
-                status.innerHTML = `Ошибка: ${e.message}`;
+                setStatus(`Ошибка подключения: ${e.message || e}`, true);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function refreshBalance() {
+            if (!walletAddress || !provider) return;
+            try {
+                const balanceWei = await provider.getBalance(walletAddress);
+                const balanceEth = ethers.utils.formatEther(balanceWei);
+                document.getElementById('balanceValue').textContent = parseFloat(balanceEth).toFixed(5);
+            } catch (e) {
+                setStatus(`Не удалось обновить баланс: ${e.message || e}`, true);
+            }
+        }
+
+        async function loadContractInfo() {
+            const addr = document.getElementById('contractAddress').value.trim();
+            const infoBox = document.getElementById('contractInfo');
+
+            if (!walletAddress) return setStatus('Сначала подключи кошелёк!', true);
+            if (!ethers.utils.isAddress(addr)) return setStatus('Введи корректный адрес контракта!', true);
+
+            setStatus('📡 Читаем контракт...');
+            try {
+                const contract = new ethers.Contract(addr, ERC20_ABI, provider);
+
+                // Каждый вызов оборачиваем отдельно — не все токены реализуют весь набор функций
+                const [name, symbol, decimals, totalSupply, balance] = await Promise.all([
+                    contract.name().catch(() => '—'),
+                    contract.symbol().catch(() => '—'),
+                    contract.decimals().catch(() => 18),
+                    contract.totalSupply().catch(() => null),
+                    contract.balanceOf(walletAddress).catch(() => null)
+                ]);
+
+                infoBox.innerHTML = `
+                    <div class="info-card"><div class="label">Название</div><div class="value">${name}</div></div>
+                    <div class="info-card"><div class="label">Символ</div><div class="value">${symbol}</div></div>
+                    <div class="info-card"><div class="label">Decimals</div><div class="value">${decimals}</div></div>
+                    <div class="info-card"><div class="label">Общий выпуск</div><div class="value">${totalSupply ? ethers.utils.formatUnits(totalSupply, decimals) : '—'}</div></div>
+                    <div class="info-card"><div class="label">Твой баланс токена</div><div class="value">${balance ? ethers.utils.formatUnits(balance, decimals) : '—'}</div></div>
+                `;
+                infoBox.classList.remove('hidden');
+                setStatus('✅ Данные контракта загружены');
+            } catch (e) {
+                setStatus(`Не удалось прочитать контракт: ${e.message || e}`, true);
+            }
+        }
+
+        async function sendTransfer() {
+            const to = document.getElementById('sendTo').value.trim();
+            const amount = document.getElementById('sendAmount').value.trim();
+
+            if (!walletAddress || !signer) return setStatus('Сначала подключи кошелёк!', true);
+            if (!ethers.utils.isAddress(to)) return setStatus('Введи корректный адрес получателя!', true);
+            if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) return setStatus('Введи корректную сумму!', true);
+
+            const confirmed = confirm(`Подтверди перевод:\n\nКому: ${to}\nСумма: ${amount}\n\nЭто действие необратимо. Продолжить?`);
+            if (!confirmed) return;
+
+            try {
+                setStatus('🔄 Ожидаем подтверждение в кошельке...');
+                const tx = await signer.sendTransaction({
+                    to,
+                    value: ethers.utils.parseEther(amount)
+                });
+                setStatus(`⏳ Транзакция отправлена, ждём подтверждения...<br><small>${tx.hash}</small>`);
+                await tx.wait();
+                setStatus(`✅ Перевод подтверждён!<br><small>${tx.hash}</small>`);
+                await refreshBalance();
+            } catch (e) {
+                setStatus(`Ошибка перевода: ${e.message || e}`, true);
             }
         }
     </script>
