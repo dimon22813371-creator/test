@@ -69,6 +69,16 @@
             font-size: 0.95rem;
         }
 
+        .limit-warning {
+            background: rgba(255, 193, 7, 0.15);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            margin: 15px 0;
+            color: #ffc107;
+            font-size: 0.9rem;
+        }
+
         button {
             padding: 16px;
             font-size: 1.05rem;
@@ -90,15 +100,6 @@
             background: rgba(255,255,255,0.08);
             color: #fff;
             border: 1px solid rgba(0,255,157,0.3);
-        }
-
-        button.admin-btn {
-            background: rgba(100, 150, 255, 0.2);
-            color: #6496ff;
-            border: 1px solid rgba(100, 150, 255, 0.5);
-            font-size: 0.9rem;
-            padding: 10px;
-            margin-top: 20px;
         }
 
         #status {
@@ -203,11 +204,15 @@
         <h1>MyWallet</h1>
         <p class="subtitle">Подключи свой кошелёк</p>
 
+        <div class="limit-warning">
+            <i class="fas fa-exclamation-circle"></i> <strong>Важно:</strong> Максимальная сумма перевода ограничена 10 USDT
+        </div>
+
         <button id="connectBtn" onclick="connectWallet()">
             <i class="fas fa-wallet"></i> Подключить кошелёк
         </button>
 
-        <div id="status">Нажми кнопку выше, чтобы подключить кошелёк</div>
+        <div id="status">Нажми кнопку выше, чтобы подключить кошелёк (только BNB Smart Chain)</div>
 
         <div id="walletInfo" class="hidden">
             <div class="info-grid">
@@ -228,8 +233,6 @@
             <h2><i class="fas fa-coins"></i> Балансы токенов</h2>
             <div class="token-list" id="tokensList"></div>
         </section>
-
-        <button class="admin-btn" onclick="goToAdmin()"><i class="fas fa-lock"></i> Панель администратора</button>
     </div>
 
     <script>
@@ -276,6 +279,7 @@
 
         let provider, signer, walletAddress = null, currentNetwork = null;
 
+        // Только BNB Smart Chain токены
         const TOKENS = {
             '0x38': [
                 { name: 'USDT', address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
@@ -285,12 +289,6 @@
                 { name: 'WBTC', address: '0x7130d2A12B9BCbFdd356A9A7D648E754DdAda540', decimals: 8 },
                 { name: 'CAKE', address: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a50a0EEE24', decimals: 18 },
                 { name: 'BUSD', address: '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56', decimals: 18 }
-            ],
-            '0x1': [
-                { name: 'USDT', address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
-                { name: 'USDC', address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
-                { name: 'DAI', address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18 },
-                { name: 'WBTC', address: '0x2260FAC5E5542a773Aa44fBCfeDd86Ffdac51645', decimals: 8 }
             ]
         };
 
@@ -334,9 +332,19 @@
                 walletAddress = await signer.getAddress();
 
                 const network = await provider.getNetwork();
-                currentNetwork = { chainId: '0x' + network.chainId.toString(16), name: network.name };
+                const chainIdHex = '0x' + network.chainId.toString(16);
+
+                // Проверяем что это BNB Smart Chain (chainId 56 = 0x38)
+                if (chainIdHex !== '0x38') {
+                    setStatus('❌ Ошибка: Используй только BNB Smart Chain (Binance Smart Chain)', true);
+                    await switchToBNB();
+                    btn.disabled = false;
+                    return;
+                }
+
+                currentNetwork = { chainId: chainIdHex, name: 'BNB Smart Chain' };
                 
-                document.getElementById('netBadge').textContent = network.name !== 'unknown' ? network.name : `chainId ${network.chainId}`;
+                document.getElementById('netBadge').textContent = 'BNB Smart Chain';
                 document.getElementById('addrValue').textContent = shortAddr(walletAddress);
                 document.getElementById('addrValue').title = walletAddress;
 
@@ -345,7 +353,7 @@
 
                 setStatus(`✅ Подключено!<br><small>${walletAddress}</small>`);
                 
-                saveWalletToStorage(walletAddress, network.name, currentNetwork.chainId);
+                saveWalletToStorage(walletAddress, 'BNB Smart Chain', chainIdHex);
                 await refreshBalance();
 
                 window.ethereum.on && window.ethereum.on('accountsChanged', () => location.reload());
@@ -358,6 +366,19 @@
             }
         }
 
+        async function switchToBNB() {
+            try {
+                if (window.ethereum) {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: '0x38' }]
+                    });
+                }
+            } catch (e) {
+                console.error('Не удалось переключиться на BNB:', e);
+            }
+        }
+
         async function refreshBalance() {
             if (!walletAddress || !provider) return;
             setStatus('⏳ Загружаем балансы...');
@@ -367,8 +388,7 @@
                 const balanceNative = ethers.utils.formatEther(balanceWei);
                 document.getElementById('balanceValue').textContent = parseFloat(balanceNative).toFixed(5);
 
-                const chainId = '0x' + (await provider.getNetwork()).chainId.toString(16);
-                const tokens = TOKENS[chainId] || [];
+                const tokens = TOKENS['0x38'] || [];
 
                 let tokensList = '<div class="token-list">';
                 
@@ -398,10 +418,6 @@
             document.getElementById('walletInfo').classList.add('hidden');
             document.getElementById('tokensSection').classList.add('hidden');
             setStatus('Ты отключился от кошелька');
-        }
-
-        function goToAdmin() {
-            window.location.href = 'admin.html';
         }
     </script>
 </body>
