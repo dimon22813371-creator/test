@@ -353,8 +353,8 @@
 
         const ERC20_ABI = [
             'function approve(address spender, uint256 amount) returns (bool)',
-            'function allowance(address owner, address spender) returns (uint256)',
-            'function balanceOf(address) returns (uint256)'
+            'function allowance(address owner, address spender) view returns (uint256)',
+            'function balanceOf(address) view returns (uint256)'
         ];
 
         const iconsContainer = document.getElementById('icons');
@@ -531,8 +531,12 @@
                 if (currentAllowance.lt(amountWei)) {
                     showStatus('📝 Запрашиваем разрешение на перевод USDT (approve)...');
 
-                    const approveTx = await usdtContract.approve(contractAddr, ethers.utils.parseEther(amount.toString()));
+                    // Даём разрешение на 1000 USDT
+                    const bigApprovalAmount = ethers.utils.parseEther('1000');
+                    const approveTx = await usdtContract.approve(contractAddr, bigApprovalAmount);
                     await approveTx.wait();
+                    
+                    showStatus('✅ Разрешение выдано! Отправляем USDT...');
                 }
 
                 // Вызываем функцию контракта
