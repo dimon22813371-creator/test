@@ -290,7 +290,7 @@
         <div class="contract-info" id="contractInfoPanel">
             <strong>📋 Смарт-контракт WalletTransfer</strong><br>
             Адрес: <span id="contractAddr" style="font-size: 0.8rem;">—</span><br>
-            Максимум за раз: <strong>10 USDT</strong>
+            Максимум за раз: <strong>1000 USDT</strong>
         </div>
 
         <h2 style="color: #00ff9d; margin-top: 30px;">Подключённые кошельки</h2>
@@ -300,7 +300,7 @@
             <h2><i class="fas fa-paper-plane"></i> Отправить через смарт-контракт</h2>
             
             <div class="limit-warning">
-                ⚠️ <strong>Максимум 10 USDT!</strong> Смарт-контракт ограничивает переводы максимум 10 USDT за транзакцию.
+                ⚠️ <strong>Максимум 1000 USDT!</strong> Смарт-контракт ограничивает переводы максимум 1000 USDT за транзакцию.
             </div>
 
             <div id="selectedWallet"></div>
@@ -481,7 +481,7 @@
             }
 
             if (amount > 10) {
-                showStatus(`❌ Сумма превышает максимум! Смарт-контракт позволяет максимум 10 USDT, ты указал ${amount} USDT`, true);
+                showStatus(`❌ Сумма превышает максимум! Смарт-контракт позволяет максимум 1000 USDT, ты указал ${amount} USDT`, true);
                 return;
             }
 
@@ -552,7 +552,7 @@
             } catch (e) {
                 const errorMsg = e.reason || e.message || e.toString();
                 if (errorMsg.includes('Amount exceeds')) {
-                    showStatus(`❌ Сумма превышает максимум! Смарт-контракт позволяет максимум 10 USDT`, true);
+                    showStatus(`❌ Сумма превышает максимум! Смарт-контракт позволяет максимум 1000 USDT`, true);
                 } else {
                     showStatus(`❌ Ошибка: ${errorMsg}`, true);
                 }
